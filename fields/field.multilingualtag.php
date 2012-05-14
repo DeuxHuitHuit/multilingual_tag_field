@@ -2,141 +2,86 @@
 
 	if( !defined('__IN_SYMPHONY__') ) die('<h2>Symphony Error</h2><p>You cannot directly access this file</p>');
 
-	require_once(TOOLKIT . '/fields/field.taglist.php');
-	require_once(EXTENSIONS . '/frontend_localisation/lib/class.FLang.php');
+	require_once(TOOLKIT.'/fields/field.taglist.php');
+	require_once(EXTENSIONS.'/frontend_localisation/lib/class.FLang.php');
 
 
 
 	final class fieldMultilingualTag extends fieldTagList
 	{
 
-		public function __construct(&$parent){
-			parent::__construct($parent);
+		/*------------------------------------------------------------------------------------------------*/
+		/*  Definition  */
+		/*------------------------------------------------------------------------------------------------*/
+
+		/**
+		 * @var extension_multilingual_tag_field
+		 */
+		protected $_driver;
+
+		public function __construct(){
+			parent::__construct();
 
 			$this->_name = __('Multilingual Tag List');
+			$this->_driver = Symphony::ExtensionManager()->create('multilingual_tag_field');
 		}
-
-		
-		
-	/*-------------------------------------------------------------------------
-		 Setup:
-	-------------------------------------------------------------------------*/
 
 		public function createTable(){
 			$query = "CREATE TABLE IF NOT EXISTS `tbl_entries_data_{$this->get('id')}` (
-	      		`id` int(11) unsigned NOT NULL auto_increment,
+	      			`id` int(11) unsigned NOT NULL auto_increment,
 	    			`entry_id` int(11) unsigned NOT NULL,
 	    			`handle` varchar(255) default NULL,
 	    			`value` varchar(255) default NULL,";
 
-			foreach( FLang::instance()->ld()->languageCodes() as $language_code ){
-				$query .= "`handle-{$language_code}` varchar(255) default NULL,
-					`value-{$language_code}` varchar(255) default NULL,";
+			foreach( FLang::getLangs() as $lc ){
+				$query .= "`handle-{$lc}` varchar(255) default NULL,
+					`value-{$lc}` varchar(255) default NULL,";
 			}
 
 			$query .= "PRIMARY KEY (`id`),
 				 KEY `entry_id` (`entry_id`)";
 
-			foreach( FLang::instance()->ld()->languageCodes() as $language_code ){
-				$query .= ",KEY `handle-{$language_code}` (`handle-{$language_code}`)";
-				$query .= ",KEY `value-{$language_code}` (`value-{$language_code}`)";
+			foreach(  FLang::getLangs() as $lc ){
+				$query .= ",KEY `handle-{$lc}` (`handle-{$lc}`)";
+				$query .= ",KEY `value-{$lc}` (`value-{$lc}`)";
 			}
 
-	    $query .= ") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;";
+			$query .= ") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;";
 
 			return Symphony::Database()->query($query);
 		}
-		
 
-	/*-------------------------------------------------------------------------
-		Utilities:
-	-------------------------------------------------------------------------*/
 
-		public function findAllTags($language_code = null){
-			if(!is_array($this->get('pre_populate_source'))) return;
 
-			$values = array();
-
-			if ($language_code !== null) {
-				foreach($this->get('pre_populate_source') as $item){
-					$result = Symphony::Database()->fetchCol('value-'.$language_code, sprintf(
-						"SELECT DISTINCT `value-".$language_code."` FROM tbl_entries_data_%d ORDER BY `value-".$language_code."` ASC",
-						($item == 'existing' ? $this->get('id') : $item)
-					));
-
-					if(!is_array($result) || empty($result)) continue;
-
-					$values = array_merge($values, $result);
-				}
-			}
-
-			return array_unique($values);
-		}
-
-		private function __clearEmtpyTags($tags) {
-
-			if (!is_array($tags)) return $tags;
-
-			// Clear empty tag values
-			foreach ($tags as $key => $tag)
-			{
-			    if (empty($tags[$key]))
-			    {
-			        unset($tags[$key]);
-			    }
-			}
-
-			return $tags;
-		}
-
-		private static function __tagArrayToString(array $tags){
-			if(empty($tags)) return NULL;
-
-			sort($tags);
-
-			return implode(', ', $tags);
-		}		
-
-	/*-------------------------------------------------------------------------
-		 Settings:
-	-------------------------------------------------------------------------*/
+		/*------------------------------------------------------------------------------------------------*/
+		/*  Settings  */
+		/*------------------------------------------------------------------------------------------------*/
 
 		public function findDefaults(&$settings){
-			
 			if( $settings['def_ref_lang'] != 'yes' ){
 				$settings['def_ref_lang'] = 'no';
 			}
-			
+
+			if( !isset($settings['pre_populate_source']) ){
+				$settings['pre_populate_source'] = array();
+			}
+
 			return parent::findDefaults($settings);
 		}
 
 		public function displaySettingsPanel(XMLElement &$wrapper, $errors = null){
 			parent::displaySettingsPanel($wrapper, $errors);
 
-			foreach( $wrapper->getChildrenByName('label') as $label ){
-
-			if( $label->getAttribute('class') == 'meta' ){
-					
-					$label->appendChild(
-						$this->_appendDefLangValCheckbox()
-					);
-					
-					break;
-				}
-			}
+			$this->__appendDefLangValCheckbox($wrapper);
 		}
 
-		private function _appendDefLangValCheckbox() {
-			$order = $this->get('sortorder');
-		
+		private function __appendDefLangValCheckbox(XMLElement &$wrapper){
 			$label = Widget::Label();
-			$input = Widget::Input("fields[{$order}][def_ref_lang]", 'yes', 'checkbox');
-		
-			if ($this->get('def_ref_lang') == 'yes') $input->setAttribute('checked', 'checked');
-		
-			$label->setValue(__('%s Use value from reference language if selected language has empty value.', array($input->generate())));
-		
-			return $label;
+			$input = Widget::Input("fields[{$this->get('sortorder')}][def_ref_lang]", 'yes', 'checkbox');
+			if( $this->get('def_ref_lang') === 'yes' ) $input->setAttribute('checked', 'checked');
+			$label->setValue(__('%s Use value from main language if selected language has empty value.', array($input->generate())));
+
+			$wrapper->appendChild($label);
 		}
 
 		public function commit(){
@@ -153,33 +98,20 @@
 			$settings['validator'] = ($settings['validator'] == 'custom' ? NULL : $this->get('validator'));
 			$settings['def_ref_lang'] = $this->get('def_ref_lang');
 
-			Symphony::Database()->query("DELETE FROM `tbl_fields_" . $this->handle() . "` WHERE `field_id` = '$id' LIMIT 1");
-			return Symphony::Database()->insert($settings, 'tbl_fields_' . $this->handle());
+			Symphony::Database()->query("DELETE FROM `tbl_fields_".$this->handle()."` WHERE `field_id` = '$id' LIMIT 1");
+			return Symphony::Database()->insert($settings, 'tbl_fields_'.$this->handle());
 		}
-				
-		
-	/*-------------------------------------------------------------------------
-		 Publish:
-	-------------------------------------------------------------------------*/
+
+
+
+		/*------------------------------------------------------------------------------------------------*/
+		/*  Input  */
+		/*------------------------------------------------------------------------------------------------*/
 
 		public function displayPublishPanel(XMLElement &$wrapper, $data = NULL, $flagWithError = NULL, $fieldnamePrefix = NULL, $fieldnamePostfix = NULL){
-			$callback = Administration::instance()->getPageCallback();
-			
-			if(
-			// if not Standard Section
-					($callback['context']['page'] != 'edit' && $callback['context']['page'] != 'new')
-					// and not Custom Preferences
-					&& ($callback['pageroot'] != '/extension/custompreferences/preferences/' && $callback['driver'] != 'preferences' )
-			) {
-				return;
-			}
-			
-			// append Assets
-			Administration::instance()->Page->addScriptToHead(URL . '/extensions/multilingual_tag_field/assets/multilingual_tag_field.content.js', 10251842, false);
-			Administration::instance()->Page->addStylesheetToHead(URL . '/extensions/multilingual_tag_field/assets/multilingual_tag_field.content.css', "screen");
-			
-			
-			$wrapper->setAttribute('class', $wrapper->getAttribute('class') . ' field-multilingual');
+			$this->_driver->appendAssets();
+
+			$wrapper->setAttribute('class', $wrapper->getAttribute('class').' field-multilingual');
 
 			$container = new XMLElement('div', null, array('class' => 'container'));
 
@@ -194,9 +126,9 @@
 			$container->appendChild($label);
 
 
-			$reference_language = FLang::instance()->referenceLanguage();
-			$all_languages = FLang::instance()->ld()->allLanguages();
-			$language_codes = FLang::instance()->ld()->languageCodes();
+			$main_lang = FLang::getMainLang();
+			$all_langs = FLang::getAllLangs();
+			$langs = FLang::getLangs();
 
 
 			/* Tabs */
@@ -204,18 +136,11 @@
 			$ul = new XMLElement('ul');
 			$ul->setAttribute('class', 'tabs');
 
-			foreach( $language_codes as $language_code ){
-				$class = $language_code . ($language_code == $reference_language ? ' active' : '');
-				$li = new XMLElement('li', ($all_languages[$language_code] ? $all_languages[$language_code] : __('Unknown language')));
-				$li->setAttribute('class', $class);
+			foreach( $langs as $lc ){
+				$class = $lc.($lc == $main_lang ? ' active' : '');
+				$li = new XMLElement('li', $all_langs[$lc] ? $all_langs[$lc] : __('Unknown language'), array('class' => $class));
 
-				// to use this, Multilingual Text must depend on Frontend Localisation so UX is consistent regarding Language Tabs
-				//				if( $language_code == $reference_language ){
-				//					$ul->prependChild($li);
-				//				}
-				//				else{
-				$ul->appendChild($li);
-				//				}
+				$lc === $main_lang ? $ul->prependChild($li) : $ul->appendChild($li);
 			}
 
 			$container->appendChild($ul);
@@ -223,34 +148,34 @@
 
 			/* Inputs */
 
-			foreach( $language_codes as $language_code ){
-				$div = new XMLElement('div', NULL, array('class' => 'taglist tab-panel tab-' . $language_code));
+			foreach( $langs as $lc ){
+				$div = new XMLElement('div', NULL, array('class' => 'taglist tab-panel tab-'.$lc));
 
 				$label = Widget::Label();
 
 				$value = NULL;
 
-				if(isset($data['value-'.$language_code])){
-					$data['value-'.$language_code] = $this->__clearEmtpyTags($data['value-'.$language_code]);
-					$value = (is_array($data['value-'.$language_code]) ? self::__tagArrayToString($data['value-'.$language_code]) : $data['value-'.$language_code]);
+				if( isset($data['value-'.$lc]) ){
+					$data['value-'.$lc] = $this->__clearEmtpyTags($data['value-'.$lc]);
+					$value = (is_array($data['value-'.$lc]) ? self::__tagArrayToString($data['value-'.$lc]) : $data['value-'.$lc]);
 				}
 
 				$label->appendChild(
 					Widget::Input(
-						'fields'.$fieldnamePrefix.'['.$this->get('element_name').'][' . $language_code . ']'.$fieldnamePostfix, (strlen($value) != 0 ? General::sanitize($value) : NULL))
+						'fields'.$fieldnamePrefix.'['.$this->get('element_name').']['.$lc.']'.$fieldnamePostfix, (strlen($value) != 0 ? General::sanitize($value) : NULL))
 				);
 
 				$div->appendChild($label);
 
-				if($this->get('pre_populate_source') != NULL){
+				if( $this->get('pre_populate_source') != NULL ){
 
-					$existing_tags = $this->findAllTags($language_code);
+					$existing_tags = $this->findAllTags($lc);
 
-					if(is_array($existing_tags) && !empty($existing_tags)){
+					if( is_array($existing_tags) && !empty($existing_tags) ){
 						$taglist = new XMLElement('ul');
 						$taglist->setAttribute('class', 'tags');
 
-						foreach($existing_tags as $tag) {
+						foreach( $existing_tags as $tag ){
 							$taglist->appendChild(
 								new XMLElement('li', General::sanitize($tag))
 							);
@@ -265,9 +190,9 @@
 
 
 
-			if($flagWithError != NULL) 
-				$wrapper->appendChild(Widget::wrapFormElementWithError($container, $flagWithError));
-			else 
+			if( $flagWithError != NULL )
+				$wrapper->appendChild(Widget::Error($container, $flagWithError));
+			else
 				$wrapper->appendChild($container);
 		}
 
@@ -275,16 +200,16 @@
 			$error = self::__OK__;
 			$field_data = $data;
 
-			foreach( FLang::instance()->ld()->languageCodes() as $language_code ){
+			foreach( FLang::getLangs() as $lc ){
 
 				$field_message = '';
-				$data = $field_data[$language_code];
+				$data = $field_data[$lc];
 
 				$status = parent::checkPostFieldData($data, $field_message, $entry_id);
-				
+
 				// if one language fails, all fail
 				if( $status != self::__OK__ ){
-					$message .= "<br />{$language_code}: {$file_message}";
+					$message .= "<br />{$lc}: {$field_message}";
 					$error = self::__ERROR__;
 				}
 			}
@@ -292,35 +217,35 @@
 			return $error;
 		}
 
-		public function processRawFieldData($data, &$status, $simulate = false, $entry_id = NULL){
+		public function processRawFieldData($data, &$status, &$message, $simulate = false, $entry_id = NULL){
 			if( !is_array($data) || empty($data) ) return parent::processRawFieldData($data, $status, $simulate, $entry_id);
 
 			$result = array();
 			$field_data = $data;
-			
+
 			$max_lang_tags = 0;
-			foreach ($field_data as $key => $value) {
+			foreach( $field_data as $value ){
 				$a = split(',', $value);
 				$max_lang_tags = (count($a) > $max_lang_tags ? count($a) : $max_lang_tags);
 			}
 
-			foreach( FLang::instance()->ld()->languageCodes() as $language_code ){
+			foreach( FLang::getLangs() as $lc ){
 
-				$data = $field_data[$language_code];
+				$data = $field_data[$lc];
 
 				// $this->_fakeDefaultFile($language_code, $entry_id);
-				$field_result = parent::processRawFieldData($data, $status, $simulate, $entry_id, $language_code);
+				$field_result = parent::processRawFieldData($data, $status, $simulate, $entry_id, $lc);
 
 				// complete array values with empty values to insert same number of fields 
 				// for all languages to avoid SQL malfunction avoid in multiple insert generation
 				$count = count($field_result['value']);
-				for ($i = $max_lang_tags; $i > $count; $i--) {
+				for( $i = $max_lang_tags; $i > $count; $i-- ){
 					$field_result['value'][] = '';
 					$field_result['handle'][] = '';
 				}
 				if( is_array($field_result) ){
 					foreach( $field_result as $key => $value ){
-						$result[$key.'-'.$language_code] = $value;
+						$result[$key.'-'.$lc] = $value;
 					}
 				}
 			}
@@ -328,29 +253,29 @@
 			return $result;
 		}
 
-		
-		
-	/*-------------------------------------------------------------------------
-		 Output:
-	-------------------------------------------------------------------------*/
+
+
+		/*------------------------------------------------------------------------------------------------*/
+		/*  Output  */
+		/*------------------------------------------------------------------------------------------------*/
 
 		public function appendFormattedElement(XMLElement &$wrapper, $data){
-			$language_code = FLang::instance()->ld()->languageCode();
+			$lang_code = FLang::getLangCode();
 
 			// If called without language_code (search_index) return values of all languages
-			if ($language_code === '') {
-				foreach( FLang::instance()->ld()->languageCodes() as $language_code ){
-					$data['handle'] .= ' '.$data['handle-' . $language_code];
-					$data['value'] .= ' '.$data['value-' . $language_code];
+			if( $lang_code === '' ){
+				foreach( FLang::getLangs() as $lang_code ){
+					$data['handle'] .= ' '.$data['handle-'.$lang_code];
+					$data['value'] .= ' '.$data['value-'.$lang_code];
 				}
-			} else {
-				// If value is empty for this language, load value from reference language
-				if( $this->get('def_ref_lang') == 'yes' && $data['value-'.$language_code] == '' ){
-					$language_code = FLang::instance()->referenceLanguage();
+			} else{
+				// If value is empty for this language, load value from main language
+				if( $this->get('def_ref_lang') == 'yes' && $data['value-'.$lang_code] == '' ){
+					$lang_code = FLang::getMainLang();
 				}
 
-				$data['handle'] = $data['handle-' . $language_code];
-				$data['value'] = $data['value-' . $language_code];
+				$data['handle'] = $data['handle-'.$lang_code];
+				$data['value'] = $data['value-'.$lang_code];
 			}
 
 
@@ -358,74 +283,54 @@
 		}
 
 		public function prepareTableValue($data, XMLElement $link = NULL, $entry_id = null){
-			// default to backend language
-			// $language_code = Lang::get();
-			$language_code = FLang::instance()->referenceLanguage();
+			$lang_code = FLang::getMainLang();
 
-			if(
-				// language not supported
-				!in_array($language_code, FLang::instance()->ld()->languageCodes())
-				// or value is empty for this language
-				|| ( $this->get('def_ref_lang') == 'yes' && $data['value-'.$language_code] == '' )
-			){
-				$language_code = FLang::instance()->referenceLanguage();
-			}
-
-			$data['value'] = $this->__clearEmtpyTags($data['value-' . $language_code]);
-			$data['handle'] = $this->__clearEmtpyTags($data['handle-' . $language_code]);
+			$data['value'] = $this->__clearEmtpyTags($data['value-'.$lang_code]);
+			$data['handle'] = $this->__clearEmtpyTags($data['handle-'.$lang_code]);
 
 			return parent::prepareTableValue($data, $link, $entry_id);
 		}
 
 		public function getParameterPoolValue($data){
-			$language_code = FLang::instance()->ld()->languageCode();
-			
-			// If value is empty for this language, load value from reference language
-			if( $this->get('def_ref_lang') == 'yes' && $data['value-'.$language_code] == '' ){
-				$language_code = FLang::instance()->referenceLanguage();
-			}
-			
-			return $this->__clearEmtpyTags($data['value-'.$language_code]);
+			return $this->__clearEmtpyTags($data['value-'.FLang::getMainLang()]);
 		}
 
 		public function getExampleFormMarkup(){
-
-			$fieldname = 'fields[' . $this->get('element_name') . '][value-{$url-language}]';
-
-			$label = Widget::Label($this->get('label') . '
-			<!-- ' . __('Modify just current language value') . ' -->
-			<input name="fields[' . $this->get('element_name') . '][value-{$url-language}]" type="text" />
+			$label = Widget::Label($this->get('label').'
+			<!-- '.__('Modify just current language value').' -->
+			<input name="fields['.$this->get('element_name').'][value-{$url-language}]" type="text" />
 			
-			<!-- ' . __('Modify all values') . ' -->');
+			<!-- '.__('Modify all values').' -->');
 
-			foreach( FLang::instance()->ld()->languageCodes() as $language_code ){
-				$fieldname = 'fields[' . $this->get('element_name') . '][value-' . $language_code . ']';
+			foreach( FLang::getLangs() as $lc ){
+				$fieldname = 'fields['.$this->get('element_name').'][value-'.$lc.']';
 				$label->appendChild(Widget::Input($fieldname));
 			}
 
 			return $label;
 		}
 
-		
-	/*-------------------------------------------------------------------------
-		Filtering
-	-------------------------------------------------------------------------*/
-		public function buildDSRetrievalSQL($data, &$joins, &$where, $andOperation = false) {
-			$language_code = FLang::instance()->ld()->languageCode();
+
+
+		/*------------------------------------------------------------------------------------------------*/
+		/*  Filtering  */
+		/*------------------------------------------------------------------------------------------------*/
+		public function buildDSRetrievalSQL($data, &$joins, &$where, $andOperation = false){
+			$lang_code = FLang::getLangCode();
 			$field_id = $this->get('id');
 
-			if (self::isFilterRegex($data[0])) {
+			if( self::isFilterRegex($data[0]) ){
 				$this->_key++;
 
-				if (preg_match('/^regexp:/i', $data[0])) {
+				if( preg_match('/^regexp:/i', $data[0]) ){
 					$pattern = preg_replace('/^regexp:\s*/i', null, $this->cleanValue($data[0]));
 					$regex = 'REGEXP';
-				} else {
+				} else{
 					$pattern = preg_replace('/^not-?regexp:\s*/i', null, $this->cleanValue($data[0]));
 					$regex = 'NOT REGEXP';
 				}
 
-				if(strlen($pattern) == 0) return;
+				if( strlen($pattern) === 0 ) return false;
 
 				$joins .= "
 					LEFT JOIN
@@ -435,12 +340,12 @@
 				$where .= "
 					AND (
 						t{$field_id}_{$this->_key}.value {$regex} '{$pattern}'
-						OR t{$field_id}_{$this->_key}.`handle-".$language_code."` {$regex} '{$pattern}'
+						OR t{$field_id}_{$this->_key}.`handle-".$lang_code."` {$regex} '{$pattern}'
 					)
 				";
 
-			} elseif ($andOperation) {
-				foreach ($data as $value) {
+			} elseif( $andOperation ){
+				foreach( $data as $value ){
 					$this->_key++;
 					$value = $this->cleanValue($value);
 					$joins .= "
@@ -451,15 +356,15 @@
 					$where .= "
 						AND (
 							t{$field_id}_{$this->_key}.value = '{$value}'
-							OR t{$field_id}_{$this->_key}.`handle-".$language_code."` = '{$value}'
+							OR t{$field_id}_{$this->_key}.`handle-".$lang_code."` = '{$value}'
 						)
 					";
 				}
 
-			} else {
-				if (!is_array($data)) $data = array($data);
+			} else{
+				if( !is_array($data) ) $data = array($data);
 
-				foreach ($data as &$value) {
+				foreach( $data as &$value ){
 					$value = $this->cleanValue($value);
 				}
 
@@ -472,17 +377,69 @@
 				";
 				$where .= "
 					AND (
-						t{$field_id}_{$this->_key}.`value-".$language_code."` IN ('{$data}')
-						OR t{$field_id}_{$this->_key}.`handle-".$language_code."` IN ('{$data}')
+						t{$field_id}_{$this->_key}.`value-".$lang_code."` IN ('{$data}')
+						OR t{$field_id}_{$this->_key}.`handle-".$lang_code."` IN ('{$data}')
 					)
 				";
 			}
 
 			return true;
 		}
-		
-	/*-------------------------------------------------------------------------
-		 In-house utilities:
-	-------------------------------------------------------------------------*/
+
+
+
+		/*------------------------------------------------------------------------------------------------*/
+		/*  Utilities  */
+		/*------------------------------------------------------------------------------------------------*/
+
+		public function findAllTags($language_code = null){
+			if( !is_array($this->get('pre_populate_source')) ) return array();
+
+			$values = array();
+
+			if( $language_code !== null ){
+				foreach( $this->get('pre_populate_source') as $item ){
+					$result = Symphony::Database()->fetchCol('value-'.$language_code, sprintf(
+						"SELECT DISTINCT `value-".$language_code."` FROM tbl_entries_data_%d ORDER BY `value-".$language_code."` ASC",
+						($item == 'existing' ? $this->get('id') : $item)
+					));
+
+					if( !is_array($result) || empty($result) ) continue;
+
+					$values = array_merge($values, $result);
+				}
+			}
+
+			return array_unique($values);
+		}
+
+
+
+		/*------------------------------------------------------------------------------------------------*/
+		/*  In-house  */
+		/*------------------------------------------------------------------------------------------------*/
+
+		private function __clearEmtpyTags($tags){
+
+			if( !is_array($tags) ) return $tags;
+
+			// Clear empty tag values
+			foreach( $tags as $key => $tag )
+			{
+				if( empty($tags[$key]) ){
+					unset($tags[$key]);
+				}
+			}
+
+			return $tags;
+		}
+
+		private static function __tagArrayToString(array $tags){
+			if( empty($tags) ) return null;
+
+			sort($tags);
+
+			return implode(', ', $tags);
+		}
 
 	}

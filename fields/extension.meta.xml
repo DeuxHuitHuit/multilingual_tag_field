@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<extension id="multilingual_upload_field" status="released" xmlns="http://symphony-cms.com/schemas/extension/1.0">
+
+	<name>Multilingual Tag Field</name>
+
+	<description>The multilingual version of the classic Tag Field.</description>
+
+	<repo type="github">https://github.com/6ui11em1/multilingual_tag_field</repo>
+
+	<!-- <url type="discuss">http://symphony-cms.com/discuss/thread/80130/</url> -->
+
+	<types>
+		<type>Field Types</type>
+		<type>Multilingual</type>
+	</types>
+
+	<authors>
+		<author>
+			<name github="vlad-ghita" symphony="vladG">Guillem Lorman</name>
+			<email>6ui11em1@gmail.com</email>
+			<website>http://www.bajoelcocotero.com</website>
+		</author>
+	</authors>
+
+	<dependencies>
+		<dependency version="1.0">https://github.com/vlad-ghita/frontend_localisation</dependency>
+	</dependencies>
+
+	<releases>
+		<release version="1.0" date="2012-03-28"><![CDATA[
+			Initial release
+		]]></release>
+	</releases>
+
+</extension>

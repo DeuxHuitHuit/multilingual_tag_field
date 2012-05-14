@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<extension id="multilingual_upload_field" status="released" xmlns="http://symphony-cms.com/schemas/extension/1.0">
+
+	<name>Multilingual Tag Field</name>
+
+	<description>The multilingual version of the classic Tag Field.</description>
+
+	<repo type="github">https://github.com/6ui11em1/multilingual_tag_field</repo>
+
+	<!-- <url type="discuss">http://symphony-cms.com/discuss/thread/80130/</url> -->
+
+	<types>
+		<type>Field Types</type>
+		<type>Multilingual</type>
+	</types>
+
+	<authors>
+		<author>
+			<name github="vlad-ghita" symphony="vladG">Guillem Lorman</name>
+			<email>6ui11em1@gmail.com</email>
+			<website>http://www.bajoelcocotero.com</website>
+		</author>
+		<author>
+			<name github="vlad-ghita" symphony="vladG">Vlad Ghita</name>
+			<email>vlad_micutul@yahoo.com</email>
+			<website>http://www.xanderadvertising.com</website>
+		</author>
+	</authors>
+
+	<dependencies>
+		<dependency version="1.5">https://github.com/vlad-ghita/frontend_localisation</dependency>
+	</dependencies>
+
+	<releases>
+		<release version="1.1" date="2012-03-28" min="2.3"><![CDATA[
+			* Symphony 2.3 compatibility.
+			* Frontend Localisation 1.5 compatibility.
+			* General clean-up.
+		]]></release>
+
+		<release version="1.0" date="2012-03-28" min="2.2"><![CDATA[
+			* Initial release
+		]]></release>
+	</releases>
+
+</extension>

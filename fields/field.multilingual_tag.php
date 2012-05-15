@@ -7,23 +7,17 @@
 
 
 
-	final class fieldMultilingualTag extends fieldTagList
+	final class fieldMultilingual_Tag extends fieldTagList
 	{
 
 		/*------------------------------------------------------------------------------------------------*/
 		/*  Definition  */
 		/*------------------------------------------------------------------------------------------------*/
 
-		/**
-		 * @var extension_multilingual_tag_field
-		 */
-		protected $_driver;
-
 		public function __construct(){
 			parent::__construct();
 
 			$this->_name = __('Multilingual Tag List');
-			$this->_driver = Symphony::ExtensionManager()->create('multilingual_tag_field');
 		}
 
 		public function createTable(){
@@ -62,10 +56,6 @@
 				$settings['def_ref_lang'] = 'no';
 			}
 
-			if( !isset($settings['pre_populate_source']) ){
-				$settings['pre_populate_source'] = array();
-			}
-
 			return parent::findDefaults($settings);
 		}
 
@@ -85,75 +75,69 @@
 		}
 
 		public function commit(){
-			if( !Field::commit() ) return false;
+			if( !parent::commit() ) return false;
 
-			$id = $this->get('id');
-
-			if( $id === false ) return false;
-
-			$settings = array();
-
-			$settings['field_id'] = $id;
-			$settings['pre_populate_source'] = (is_null($this->get('pre_populate_source')) ? NULL : implode(',', $this->get('pre_populate_source')));
-			$settings['validator'] = ($settings['validator'] == 'custom' ? NULL : $this->get('validator'));
-			$settings['def_ref_lang'] = $this->get('def_ref_lang');
-
-			Symphony::Database()->query("DELETE FROM `tbl_fields_".$this->handle()."` WHERE `field_id` = '$id' LIMIT 1");
-			return Symphony::Database()->insert($settings, 'tbl_fields_'.$this->handle());
+			return Symphony::Database()->query(sprintf("
+				UPDATE
+					`tbl_fields_%s`
+				SET
+					`def_ref_lang` = '%s'
+				WHERE
+					`field_id` = '%s';",
+				$this->handle(), $this->get('def_ref_lang'), $this->get('id')
+			));
 		}
 
 
 
 		/*------------------------------------------------------------------------------------------------*/
-		/*  Input  */
+		/*  Publish  */
 		/*------------------------------------------------------------------------------------------------*/
 
 		public function displayPublishPanel(XMLElement &$wrapper, $data = NULL, $flagWithError = NULL, $fieldnamePrefix = NULL, $fieldnamePostfix = NULL){
-			$this->_driver->appendAssets();
-
-			$wrapper->setAttribute('class', $wrapper->getAttribute('class').' field-multilingual');
-
-			$container = new XMLElement('div', null, array('class' => 'container'));
-
-
-			/* Label */
-
-			$label = Widget::Label($this->get('label'));
-			$class = 'taglist';
-			$label->setAttribute('class', $class);
-			if( $this->get('required') != 'yes' ) $label->appendChild(new XMLElement('i', __('Optional')));
-
-			$container->appendChild($label);
-
+			Extension_Frontend_Localisation::appendAssets();
+			Extension_Multilingual_Tag_Field::appendAssets();
 
 			$main_lang = FLang::getMainLang();
 			$all_langs = FLang::getAllLangs();
 			$langs = FLang::getLangs();
 
+			$wrapper->setAttribute('class', $wrapper->getAttribute('class').' field-multilingual');
+			$container = new XMLElement('div', null, array('class' => 'container'));
 
-			/* Tabs */
 
-			$ul = new XMLElement('ul');
-			$ul->setAttribute('class', 'tabs');
+			/*------------------------------------------------------------------------------------------------*/
+			/*  Label  */
+			/*------------------------------------------------------------------------------------------------*/
 
+			$label = Widget::Label($this->get('label'));
+			if( $this->get('required') != 'yes' ) $label->appendChild(new XMLElement('i', __('Optional')));
+			$container->appendChild($label);
+
+
+			/*------------------------------------------------------------------------------------------------*/
+			/*  Tabs  */
+			/*------------------------------------------------------------------------------------------------*/
+
+			$ul = new XMLElement('ul', null, array('class' => 'tabs'));
 			foreach( $langs as $lc ){
-				$class = $lc.($lc == $main_lang ? ' active' : '');
-				$li = new XMLElement('li', $all_langs[$lc] ? $all_langs[$lc] : __('Unknown language'), array('class' => $class));
-
+				$li = new XMLElement('li', $all_langs[$lc], array('class' => $lc));
 				$lc === $main_lang ? $ul->prependChild($li) : $ul->appendChild($li);
 			}
 
 			$container->appendChild($ul);
 
 
-			/* Inputs */
+			/*------------------------------------------------------------------------------------------------*/
+			/*  Panels  */
+			/*------------------------------------------------------------------------------------------------*/
 
 			foreach( $langs as $lc ){
-				$div = new XMLElement('div', NULL, array('class' => 'taglist tab-panel tab-'.$lc));
+				$div = new XMLElement('div', NULL, array('class' => 'tab-panel tab-'.$lc));
 
 				$label = Widget::Label();
 
-				$value = NULL;
+				$value = null;
 
 				if( isset($data['value-'.$lc]) ){
 					$data['value-'.$lc] = $this->__clearEmtpyTags($data['value-'.$lc]);
@@ -162,7 +146,9 @@
 
 				$label->appendChild(
 					Widget::Input(
-						'fields'.$fieldnamePrefix.'['.$this->get('element_name').']['.$lc.']'.$fieldnamePostfix, (strlen($value) != 0 ? General::sanitize($value) : NULL))
+						"fields{$fieldnamePrefix}[{$this->get('element_name')}][{$lc}]{$fieldnamePostfix}",
+						(strlen($value) != 0 ? General::sanitize($value) : NULL)
+					)
 				);
 
 				$div->appendChild($label);
@@ -189,12 +175,21 @@
 			}
 
 
+			/*------------------------------------------------------------------------------------------------*/
+			/*  Errors  */
+			/*------------------------------------------------------------------------------------------------*/
 
 			if( $flagWithError != NULL )
 				$wrapper->appendChild(Widget::Error($container, $flagWithError));
 			else
 				$wrapper->appendChild($container);
 		}
+
+
+
+		/*------------------------------------------------------------------------------------------------*/
+		/*  Input  */
+		/*------------------------------------------------------------------------------------------------*/
 
 		public function checkPostFieldData($data, &$message, $entry_id = NULL){
 			$error = self::__OK__;
@@ -297,14 +292,13 @@
 
 		public function getExampleFormMarkup(){
 			$label = Widget::Label($this->get('label').'
-			<!-- '.__('Modify just current language value').' -->
-			<input name="fields['.$this->get('element_name').'][value-{$url-language}]" type="text" />
-			
-			<!-- '.__('Modify all values').' -->');
+					<!-- '.__('Modify just current language value').' -->
+					<input name="fields['.$this->get('element_name').'][value-{$url-fl-language}]" type="text" />
+
+					<!-- '.__('Modify all values').' -->');
 
 			foreach( FLang::getLangs() as $lc ){
-				$fieldname = 'fields['.$this->get('element_name').'][value-'.$lc.']';
-				$label->appendChild(Widget::Input($fieldname));
+				$label->appendChild(Widget::Input("fields[{$this->get('element_name')}][value-{$lc}]"));
 			}
 
 			return $label;
@@ -315,6 +309,7 @@
 		/*------------------------------------------------------------------------------------------------*/
 		/*  Filtering  */
 		/*------------------------------------------------------------------------------------------------*/
+
 		public function buildDSRetrievalSQL($data, &$joins, &$where, $andOperation = false){
 			$lang_code = FLang::getLangCode();
 			$field_id = $this->get('id');
@@ -392,15 +387,15 @@
 		/*  Utilities  */
 		/*------------------------------------------------------------------------------------------------*/
 
-		public function findAllTags($language_code = null){
+		public function findAllTags($lang_code = null){
 			if( !is_array($this->get('pre_populate_source')) ) return array();
 
 			$values = array();
 
-			if( $language_code !== null ){
+			if( $lang_code !== null ){
 				foreach( $this->get('pre_populate_source') as $item ){
-					$result = Symphony::Database()->fetchCol('value-'.$language_code, sprintf(
-						"SELECT DISTINCT `value-".$language_code."` FROM tbl_entries_data_%d ORDER BY `value-".$language_code."` ASC",
+					$result = Symphony::Database()->fetchCol('value-'.$lang_code, sprintf(
+						"SELECT DISTINCT `value-".$lang_code."` FROM tbl_entries_data_%d ORDER BY `value-".$lang_code."` ASC",
 						($item == 'existing' ? $this->get('id') : $item)
 					));
 

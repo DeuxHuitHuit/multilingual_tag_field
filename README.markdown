@@ -1,20 +1,6 @@
 Field: Multilingual Tag Upload
 ==============
 
-A field that allows tags for different frontend languages.
-
-* Version: 1.1
-* Build Date: 2012-05-14
-* Authors:
-	- [Bajoelcocotero](http://www.bajoelcocotero.com)
-	- Guillem Lorman
-	- Vlad Ghita ([Xander Advertising](http://www.xanderadvertising.com))
-* Requirements:
-	- Symphony 2.3
-	- [Frontend Localisation 1.5](https://github.com/vlad-ghita/frontend_localisation)
-
-
-
 ## 1 About ##
 
 This is the multilingual version of the classic tag field.

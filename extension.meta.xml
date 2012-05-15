@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<extension id="multilingual_upload_field" status="released" xmlns="http://symphony-cms.com/schemas/extension/1.0">
+<extension id="multilingual_tag_field" status="released" xmlns="http://symphony-cms.com/schemas/extension/1.0">
 
 	<name>Multilingual Tag Field</name>
 

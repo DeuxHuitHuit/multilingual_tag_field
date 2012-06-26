@@ -42,6 +42,11 @@
 					"RENAME TABLE `tbl_fields_multilingualtag` TO `%s`;",
 					self::FIELD_TABLE
 				));
+
+				Symphony::Database()->query(sprintf(
+					"UPDATE tbl_fields SET type = 'multilingual_tag' WHERE type = '%s;",
+					'multilingualtag'
+				));
 			}
 
 			return true;

@@ -95,6 +95,13 @@
 		/*------------------------------------------------------------------------------------------------*/
 
 		public function displayPublishPanel(XMLElement &$wrapper, $data = NULL, $flagWithError = NULL, $fieldnamePrefix = NULL, $fieldnamePostfix = NULL){
+
+			// We've been called out of context: Pulblish Filter
+			$callback = Administration::instance()->getPageCallback();
+			if($callback['context']['page'] != 'edit' && $callback['context']['page'] != 'new') {
+				return;
+			}
+
 			Extension_Frontend_Localisation::appendAssets();
 			Extension_Multilingual_Tag_Field::appendAssets();
 

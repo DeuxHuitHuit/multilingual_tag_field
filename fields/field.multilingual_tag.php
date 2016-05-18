@@ -228,7 +228,7 @@
 
 			$max_lang_tags = 0;
 			foreach( $field_data as $value ){
-				$a = split(',', $value);
+				$a = explode(',', $value);
 				$max_lang_tags = (count($a) > $max_lang_tags ? count($a) : $max_lang_tags);
 			}
 

@@ -402,10 +402,23 @@
 
 			if( $lang_code !== null ){
 				foreach( $this->get('pre_populate_source') as $item ){
-					$result = Symphony::Database()->fetchCol('value-'.$lang_code, sprintf(
-						"SELECT DISTINCT `value-".$lang_code."` FROM tbl_entries_data_%d ORDER BY `value-".$lang_code."` ASC",
-						($item == 'existing' ? $this->get('id') : $item)
-					));
+					try {
+						$result = Symphony::Database()->fetchCol('value-'.$lang_code, sprintf(
+							"SELECT DISTINCT `value-$lang_code` FROM tbl_entries_data_%d ORDER BY `value-$lang_code` ASC",
+							($item == 'existing' ? $this->get('id') : $item)
+						));
+					}
+					catch (Exception $ex) {
+						try {
+							$result = Symphony::Database()->fetchCol('value', sprintf(
+								"SELECT DISTINCT `value` FROM tbl_entries_data_%d ORDER BY `value` ASC",
+								($item == 'existing' ? $this->get('id') : $item)
+							));
+						}
+						catch (Exception $ex) {
+							$result = null;
+						}
+					}
 
 					if( !is_array($result) || empty($result) ) continue;
 

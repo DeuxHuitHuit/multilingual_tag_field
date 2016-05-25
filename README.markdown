@@ -1,4 +1,4 @@
-Field: Multilingual Tag Upload
+Field: Multilingual Tag List
 ==============
 
 ## 1 About ##

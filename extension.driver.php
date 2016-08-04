@@ -28,7 +28,7 @@
 					`field_id` int(11) unsigned NOT NULL,
 					`validator` varchar(50),
 					`pre_populate_source` varchar(15),
-					`def_ref_lang` enum('yes','no') default 'no',
+					`def_ref_lang` enum('yes','no') NOT NULL default 'no',
 					PRIMARY KEY (`id`),
 					KEY `field_id` (`field_id`)
 				) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;",
@@ -36,7 +36,7 @@
 			));
 		}
 
-		public function update($prev_version){
+		public function update($previousVersion = false){
 			if( version_compare($prev_version, '1.2', '<') ){
 				Symphony::Database()->query(sprintf(
 					"RENAME TABLE `tbl_fields_multilingualtag` TO `%s`;",

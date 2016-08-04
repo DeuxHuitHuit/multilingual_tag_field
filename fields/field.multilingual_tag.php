@@ -51,7 +51,7 @@
 		/*  Settings  */
 		/*------------------------------------------------------------------------------------------------*/
 
-		public function findDefaults(&$settings){
+		public function findDefaults(array &$settings){
 			if( $settings['def_ref_lang'] != 'yes' ){
 				$settings['def_ref_lang'] = 'no';
 			}
@@ -94,7 +94,7 @@
 		/*  Publish  */
 		/*------------------------------------------------------------------------------------------------*/
 
-		public function displayPublishPanel(XMLElement &$wrapper, $data = NULL, $flagWithError = NULL, $fieldnamePrefix = NULL, $fieldnamePostfix = NULL){
+		public function displayPublishPanel(XMLElement &$wrapper, $data = NULL, $flagWithError = NULL, $fieldnamePrefix = NULL, $fieldnamePostfix = NULL, $entry_id = NULL){
 
 			// We've been called out of context: Pulblish Filter
 			$callback = Administration::instance()->getPageCallback();
@@ -220,7 +220,7 @@
 			return $error;
 		}
 
-		public function processRawFieldData($data, &$status, &$message, $simulate = false, $entry_id = NULL){
+		public function processRawFieldData($data, &$status, &$message = NULL, $simulate = false, $entry_id = NULL){
 			if( !is_array($data) || empty($data) ) return parent::processRawFieldData($data, $status, $simulate, $entry_id);
 
 			$result = array();
@@ -262,7 +262,7 @@
 		/*  Output  */
 		/*------------------------------------------------------------------------------------------------*/
 
-		public function appendFormattedElement(XMLElement &$wrapper, $data){
+		public function appendFormattedElement(XMLElement &$wrapper, $data, $encode = false, $mode = NULL, $entry_id = NULL){
 			$lang_code = FLang::getLangCode();
 
 			// If called without language_code (search_index) return values of all languages
@@ -294,7 +294,7 @@
 			return parent::prepareTableValue($data, $link, $entry_id);
 		}
 
-		public function getParameterPoolValue($data){
+		public function getParameterPoolValue(array $data, $entry_id = NULL){
 			return $this->__clearEmtpyTags($data['value-'.FLang::getMainLang()]);
 		}
 

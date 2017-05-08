@@ -128,7 +128,7 @@
 
 			$ul = new XMLElement('ul', null, array('class' => 'tabs'));
 			foreach( $langs as $lc ){
-				$li = new XMLElement('li', $all_langs[$lc], array('class' => $lc));
+				$li = new XMLElement('li', $lc, array('class' => $lc));
 				$lc === $main_lang ? $ul->prependChild($li) : $ul->appendChild($li);
 			}
 
@@ -239,7 +239,7 @@
 				// $this->_fakeDefaultFile($language_code, $entry_id);
 				$field_result = parent::processRawFieldData($data, $status, $simulate, $entry_id, $lc);
 
-				// complete array values with empty values to insert same number of fields 
+				// complete array values with empty values to insert same number of fields
 				// for all languages to avoid SQL malfunction avoid in multiple insert generation
 				$count = count($field_result['value']);
 				for( $i = $max_lang_tags; $i > $count; $i-- ){

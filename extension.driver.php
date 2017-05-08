@@ -192,8 +192,6 @@
 				self::$assets_loaded = true;
 
 				$page = Administration::instance()->Page;
-
-				$page->addStylesheetToHead(URL.'/extensions/'.MTF_GROUP.'/assets/'.MTF_GROUP.'.publish.css', 'screen', null, false);
 			}
 		}
 

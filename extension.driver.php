@@ -37,7 +37,7 @@
 		}
 
 		public function update($previousVersion = false){
-			if( version_compare($prev_version, '1.2', '<') ){
+			if( version_compare($previousVersion, '1.2', '<') ){
 				Symphony::Database()->query(sprintf(
 					"RENAME TABLE `tbl_fields_multilingualtag` TO `%s`;",
 					self::FIELD_TABLE

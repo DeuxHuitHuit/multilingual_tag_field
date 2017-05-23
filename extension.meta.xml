@@ -28,6 +28,9 @@
 		<dependency version="1.5">https://github.com/vlad-ghita/frontend_localisation</dependency>
 	</dependencies>
 	<releases>
+		<release version="1.2.3" date="2017-05-23" min="2.3" max="2.x.x"><![CDATA[
+			* Fixed broken updater in 1.2.2
+		]]></release>
 		<release version="1.2.2" date="2016-08-04" min="2.3" max="2.x.x"><![CDATA[
 			* Supported on PHP 7.
 			* Fixed parameter to fit the parent method.

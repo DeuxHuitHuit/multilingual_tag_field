@@ -24,11 +24,11 @@
 		public function install(){
 			return Symphony::Database()->query(sprintf(
 				"CREATE TABLE `%s` (
-					`id` int(11) unsigned NOT NULL auto_increment,
-					`field_id` int(11) unsigned NOT NULL,
-					`validator` varchar(50),
-					`pre_populate_source` varchar(15),
-					`def_ref_lang` enum('yes','no') NOT NULL default 'no',
+					`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+					`field_id` INT(11) UNSIGNED NOT NULL,
+					`validator` VARCHAR(50),
+					`pre_populate_source` VARCHAR(15),
+					`def_ref_lang` ENUM('yes','no') NOT NULL default 'no',
 					PRIMARY KEY (`id`),
 					KEY `field_id` (`field_id`)
 				) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;",
@@ -169,8 +169,8 @@
 						if( !in_array('handle-'.$lc, $columns) )
 							Symphony::Database()->query(sprintf(
 								'ALTER TABLE `%1$s`
-									ADD COLUMN `handle-%2$s` varchar(255) default NULL,
-									ADD COLUMN `value-%2$s` varchar(50) default NULL;',
+									ADD COLUMN `handle-%2$s` VARCHAR(255) DEFAULT NULL,
+									ADD COLUMN `value-%2$s` VARCHAR(50) DEFAULT NULL;',
 								$entries_table, $lc
 							));
 				}

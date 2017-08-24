@@ -22,14 +22,14 @@
 
 		public function createTable(){
 			$query = "CREATE TABLE IF NOT EXISTS `tbl_entries_data_{$this->get('id')}` (
-	      			`id` int(11) unsigned NOT NULL auto_increment,
-	    			`entry_id` int(11) unsigned NOT NULL,
-	    			`handle` varchar(255) default NULL,
-	    			`value` varchar(255) default NULL,";
+	      			`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+	    			`entry_id` INT(11) UNSIGNED NOT NULL,
+	    			`handle` VARCHAR(255) DEFAULT NULL,
+	    			`value` VARCHAR(255) DEFAULT NULL,";
 
 			foreach( FLang::getLangs() as $lc ){
-				$query .= "`handle-{$lc}` varchar(255) default NULL,
-					`value-{$lc}` varchar(255) default NULL,";
+				$query .= "`handle-{$lc}` VARCHAR(255) DEFAULT NULL,
+					`value-{$lc}` VARCHAR(255) DEFAULT NULL,";
 			}
 
 			$query .= "PRIMARY KEY (`id`),
@@ -94,7 +94,7 @@
 		/*  Publish  */
 		/*------------------------------------------------------------------------------------------------*/
 
-		public function displayPublishPanel(XMLElement &$wrapper, $data = NULL, $flagWithError = NULL, $fieldnamePrefix = NULL, $fieldnamePostfix = NULL, $entry_id = NULL){
+		public function displayPublishPanel(XMLElement &$wrapper, $data = null, $flagWithError = null, $fieldnamePrefix = null, $fieldnamePostfix = null, $entry_id = null){
 
 			// We've been called out of context: Pulblish Filter
 			$callback = Administration::instance()->getPageCallback();
@@ -140,7 +140,7 @@
 			/*------------------------------------------------------------------------------------------------*/
 
 			foreach( $langs as $lc ){
-				$div = new XMLElement('div', NULL, array('class' => 'tab-panel tab-'.$lc));
+				$div = new XMLElement('div', null, array('class' => 'tab-panel tab-'.$lc));
 
 				$label = Widget::Label();
 
@@ -154,13 +154,13 @@
 				$label->appendChild(
 					Widget::Input(
 						"fields{$fieldnamePrefix}[{$this->get('element_name')}][{$lc}]{$fieldnamePostfix}",
-						(strlen($value) != 0 ? General::sanitize($value) : NULL)
+						(strlen($value) != 0 ? General::sanitize($value) : null)
 					)
 				);
 
 				$div->appendChild($label);
 
-				if( $this->get('pre_populate_source') != NULL ){
+				if( $this->get('pre_populate_source') != null ){
 
 					$existing_tags = $this->findAllTags($lc);
 
@@ -187,7 +187,7 @@
 			/*  Errors  */
 			/*------------------------------------------------------------------------------------------------*/
 
-			if( $flagWithError != NULL )
+			if( $flagWithError != null )
 				$wrapper->appendChild(Widget::Error($container, $flagWithError));
 			else
 				$wrapper->appendChild($container);
@@ -199,7 +199,7 @@
 		/*  Input  */
 		/*------------------------------------------------------------------------------------------------*/
 
-		public function checkPostFieldData($data, &$message, $entry_id = NULL){
+		public function checkPostFieldData($data, &$message, $entry_id = null){
 			$error = self::__OK__;
 			$field_data = $data;
 
@@ -220,7 +220,7 @@
 			return $error;
 		}
 
-		public function processRawFieldData($data, &$status, &$message = NULL, $simulate = false, $entry_id = NULL){
+		public function processRawFieldData($data, &$status, &$message = null, $simulate = false, $entry_id = null){
 			if( !is_array($data) || empty($data) ) return parent::processRawFieldData($data, $status, $simulate, $entry_id);
 
 			$result = array();
@@ -262,7 +262,7 @@
 		/*  Output  */
 		/*------------------------------------------------------------------------------------------------*/
 
-		public function appendFormattedElement(XMLElement &$wrapper, $data, $encode = false, $mode = NULL, $entry_id = NULL){
+		public function appendFormattedElement(XMLElement &$wrapper, $data, $encode = false, $mode = null, $entry_id = null){
 			$lang_code = FLang::getLangCode();
 
 			// If called without language_code (search_index) return values of all languages
@@ -285,7 +285,7 @@
 			parent::appendFormattedElement($wrapper, $data);
 		}
 
-		public function prepareTableValue($data, XMLElement $link = NULL, $entry_id = null){
+		public function prepareTableValue($data, XMLElement $link = null, $entry_id = null){
 			$lang_code = FLang::getMainLang();
 
 			$data['value'] = $this->__clearEmtpyTags($data['value-'.$lang_code]);
@@ -294,7 +294,7 @@
 			return parent::prepareTableValue($data, $link, $entry_id);
 		}
 
-		public function getParameterPoolValue(array $data, $entry_id = NULL){
+		public function getParameterPoolValue(array $data, $entry_id = null){
 			return $this->__clearEmtpyTags($data['value-'.FLang::getMainLang()]);
 		}
 

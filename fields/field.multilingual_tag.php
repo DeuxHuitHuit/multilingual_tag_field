@@ -47,28 +47,6 @@
 		}
 
 		public function createTable(){
-			// $query = "CREATE TABLE IF NOT EXISTS `tbl_entries_data_{$this->get('id')}` (
-	  //     			`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-	  //   			`entry_id` INT(11) UNSIGNED NOT NULL,
-	  //   			`handle` VARCHAR(255) DEFAULT NULL,
-	  //   			`value` VARCHAR(255) DEFAULT NULL,";
-
-			// foreach( FLang::getLangs() as $lc ){
-			// 	$query .= "`handle-{$lc}` VARCHAR(255) DEFAULT NULL,
-			// 		`value-{$lc}` VARCHAR(255) DEFAULT NULL,";
-			// }
-
-			// $query .= "PRIMARY KEY (`id`),
-			// 	 KEY `entry_id` (`entry_id`)";
-
-			// foreach(  FLang::getLangs() as $lc ){
-			// 	$query .= ",KEY `handle-{$lc}` (`handle-{$lc}`)";
-			// 	$query .= ",KEY `value-{$lc}` (`value-{$lc}`)";
-			// }
-
-			// $query .= ") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;";
-
-			// return Symphony::Database()->query($query);
 			return Symphony::Database()
 				->create('tbl_entries_data_' . $this->get('id'))
 				->ifNotExists()
@@ -129,15 +107,6 @@
 		public function commit(){
 			if( !parent::commit() ) return false;
 
-			// return Symphony::Database()->query(sprintf("
-			// 	UPDATE
-			// 		`tbl_fields_%s`
-			// 	SET
-			// 		`def_ref_lang` = '%s'
-			// 	WHERE
-			// 		`field_id` = '%s';",
-			// 	$this->handle(), $this->get('def_ref_lang'), $this->get('id')
-			// ));
 			return Symphony::Database()
 				->update('tbl_fields_' . $this->handle())
 				->set([
@@ -463,10 +432,6 @@
 			if( $lang_code !== null ){
 				foreach( $this->get('pre_populate_source') as $item ){
 					try {
-						// $result = Symphony::Database()->fetchCol('value-'.$lang_code, sprintf(
-						// 	"SELECT DISTINCT `value-$lang_code` FROM tbl_entries_data_%d ORDER BY `value-$lang_code` ASC",
-						// 	($item == 'existing' ? $this->get('id') : $item)
-						// ));
 						$result = Symphony::Database()
 							->select(['value-' . $lang_code])
 							->distinct()
@@ -477,10 +442,6 @@
 					}
 					catch (Exception $ex) {
 						try {
-							// $result = Symphony::Database()->fetchCol('value', sprintf(
-							// 	"SELECT DISTINCT `value` FROM tbl_entries_data_%d ORDER BY `value` ASC",
-							// 	($item == 'existing' ? $this->get('id') : $item)
-							// ));
 							$result = Symphony::Database()
 								->select(['value'])
 								->distinct()

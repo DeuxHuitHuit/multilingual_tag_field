@@ -20,29 +20,81 @@
 			$this->_name = __('Multilingual Tag List');
 		}
 
+		public static function generateTableColumns($langs = null)
+		{
+			$cols = array();
+			foreach (FLang::getLangs() as $lc) {
+				$cols['handle-' . $lc] = [
+					'type' => 'varchar(255)',
+					'null' => true,
+				];
+				$cols['value-' . $lc] = [
+					'type' => 'varchar(255)',
+					'null' => true,
+				];
+			}
+			return $cols;
+		}
+
+		public static function generateTableKeys($langs = null)
+		{
+			$keys = array();
+			foreach (FLang::getLangs() as $lc) {
+				$keys['handle-' . $lc] = 'key';
+				$keys['value-' . $lc] = 'key';
+			}
+			return $keys;
+		}
+
 		public function createTable(){
-			$query = "CREATE TABLE IF NOT EXISTS `tbl_entries_data_{$this->get('id')}` (
-	      			`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-	    			`entry_id` INT(11) UNSIGNED NOT NULL,
-	    			`handle` VARCHAR(255) DEFAULT NULL,
-	    			`value` VARCHAR(255) DEFAULT NULL,";
+			// $query = "CREATE TABLE IF NOT EXISTS `tbl_entries_data_{$this->get('id')}` (
+	  //     			`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+	  //   			`entry_id` INT(11) UNSIGNED NOT NULL,
+	  //   			`handle` VARCHAR(255) DEFAULT NULL,
+	  //   			`value` VARCHAR(255) DEFAULT NULL,";
 
-			foreach( FLang::getLangs() as $lc ){
-				$query .= "`handle-{$lc}` VARCHAR(255) DEFAULT NULL,
-					`value-{$lc}` VARCHAR(255) DEFAULT NULL,";
-			}
+			// foreach( FLang::getLangs() as $lc ){
+			// 	$query .= "`handle-{$lc}` VARCHAR(255) DEFAULT NULL,
+			// 		`value-{$lc}` VARCHAR(255) DEFAULT NULL,";
+			// }
 
-			$query .= "PRIMARY KEY (`id`),
-				 KEY `entry_id` (`entry_id`)";
+			// $query .= "PRIMARY KEY (`id`),
+			// 	 KEY `entry_id` (`entry_id`)";
 
-			foreach(  FLang::getLangs() as $lc ){
-				$query .= ",KEY `handle-{$lc}` (`handle-{$lc}`)";
-				$query .= ",KEY `value-{$lc}` (`value-{$lc}`)";
-			}
+			// foreach(  FLang::getLangs() as $lc ){
+			// 	$query .= ",KEY `handle-{$lc}` (`handle-{$lc}`)";
+			// 	$query .= ",KEY `value-{$lc}` (`value-{$lc}`)";
+			// }
 
-			$query .= ") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;";
+			// $query .= ") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;";
 
-			return Symphony::Database()->query($query);
+			// return Symphony::Database()->query($query);
+			return Symphony::Database()
+				->create('tbl_entries_data_' . $this->get('id'))
+				->ifNotExists()
+				->charset('utf8')
+				->collate('utf8_unicode_ci')
+				->fields(array_merge([
+					'id' => [
+						'type' => 'int(11)',
+						'auto' => true,
+					],
+					'entry_id' => 'int(11)',
+					'handle' => [
+						'type' => 'varchar(255)',
+						'null' => auto,
+					],
+					'value' => [
+						'type' => 'varchar(255)',
+						'null' => true,
+					],
+				], self::generateTableColumns()))
+				->keys(array_merge([
+					'id' => 'primary',
+					'entry_id' => 'key',
+				], self::generateTableKeys()))
+				->execute()
+				->success();
 		}
 
 
@@ -77,15 +129,23 @@
 		public function commit(){
 			if( !parent::commit() ) return false;
 
-			return Symphony::Database()->query(sprintf("
-				UPDATE
-					`tbl_fields_%s`
-				SET
-					`def_ref_lang` = '%s'
-				WHERE
-					`field_id` = '%s';",
-				$this->handle(), $this->get('def_ref_lang'), $this->get('id')
-			));
+			// return Symphony::Database()->query(sprintf("
+			// 	UPDATE
+			// 		`tbl_fields_%s`
+			// 	SET
+			// 		`def_ref_lang` = '%s'
+			// 	WHERE
+			// 		`field_id` = '%s';",
+			// 	$this->handle(), $this->get('def_ref_lang'), $this->get('id')
+			// ));
+			return Symphony::Database()
+				->update('tbl_fields_' . $this->handle())
+				->set([
+					'def_ref_lang' => $this->get('def_ref_lang'),
+				])
+				->where(['field_id' => $this->get('id')])
+				->execute()
+				->success();
 		}
 
 
@@ -403,17 +463,31 @@
 			if( $lang_code !== null ){
 				foreach( $this->get('pre_populate_source') as $item ){
 					try {
-						$result = Symphony::Database()->fetchCol('value-'.$lang_code, sprintf(
-							"SELECT DISTINCT `value-$lang_code` FROM tbl_entries_data_%d ORDER BY `value-$lang_code` ASC",
-							($item == 'existing' ? $this->get('id') : $item)
-						));
+						// $result = Symphony::Database()->fetchCol('value-'.$lang_code, sprintf(
+						// 	"SELECT DISTINCT `value-$lang_code` FROM tbl_entries_data_%d ORDER BY `value-$lang_code` ASC",
+						// 	($item == 'existing' ? $this->get('id') : $item)
+						// ));
+						$result = Symphony::Database()
+							->select(['value-' . $lang_code])
+							->distinct()
+							->from('tbl_entries_data_' . ($item == 'existing' ? $this->get('id') : $item))
+							->orderBy('value-' . $lang_code)
+							->execute()
+							->column('value-' . $lang_code);
 					}
 					catch (Exception $ex) {
 						try {
-							$result = Symphony::Database()->fetchCol('value', sprintf(
-								"SELECT DISTINCT `value` FROM tbl_entries_data_%d ORDER BY `value` ASC",
-								($item == 'existing' ? $this->get('id') : $item)
-							));
+							// $result = Symphony::Database()->fetchCol('value', sprintf(
+							// 	"SELECT DISTINCT `value` FROM tbl_entries_data_%d ORDER BY `value` ASC",
+							// 	($item == 'existing' ? $this->get('id') : $item)
+							// ));
+							$result = Symphony::Database()
+								->select(['value'])
+								->distinct()
+								->from('tbl_entries_data_' . ($item == 'existing' ? $this->get('id') : $item))
+								->orderBy('value')
+								->execute()
+								->column('value');
 						}
 						catch (Exception $ex) {
 							$result = null;

@@ -4,6 +4,7 @@
 
 	require_once(TOOLKIT.'/fields/field.taglist.php');
 	require_once(EXTENSIONS.'/frontend_localisation/lib/class.FLang.php');
+	require_once EXTENSIONS . '/multilingual_tag_field/lib/class.entryquerymultilingualtagadapter.php';
 
 
 
@@ -16,6 +17,7 @@
 
 		public function __construct(){
 			parent::__construct();
+			$this->entryQueryFieldAdapter = new EntryQueryMultilingualTagAdapter($this);
 
 			$this->_name = __('Multilingual Tag List');
 		}

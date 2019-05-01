@@ -4,6 +4,7 @@
 
 	require_once(TOOLKIT.'/fields/field.taglist.php');
 	require_once(EXTENSIONS.'/frontend_localisation/lib/class.FLang.php');
+	require_once EXTENSIONS . '/multilingual_tag_field/lib/class.entryquerymultilingualtagadapter.php';
 
 
 
@@ -16,33 +17,62 @@
 
 		public function __construct(){
 			parent::__construct();
+			$this->entryQueryFieldAdapter = new EntryQueryMultilingualTagAdapter($this);
 
 			$this->_name = __('Multilingual Tag List');
 		}
 
+		public static function generateTableColumns($langs = null)
+		{
+			$cols = array();
+			foreach (FLang::getLangs() as $lc) {
+				$cols['handle-' . $lc] = [
+					'type' => 'varchar(255)',
+					'null' => true,
+				];
+				$cols['value-' . $lc] = [
+					'type' => 'varchar(255)',
+					'null' => true,
+				];
+			}
+			return $cols;
+		}
+
+		public static function generateTableKeys($langs = null)
+		{
+			$keys = array();
+			foreach (FLang::getLangs() as $lc) {
+				$keys['handle-' . $lc] = 'key';
+				$keys['value-' . $lc] = 'key';
+			}
+			return $keys;
+		}
+
 		public function createTable(){
-			$query = "CREATE TABLE IF NOT EXISTS `tbl_entries_data_{$this->get('id')}` (
-	      			`id` int(11) unsigned NOT NULL auto_increment,
-	    			`entry_id` int(11) unsigned NOT NULL,
-	    			`handle` varchar(255) default NULL,
-	    			`value` varchar(255) default NULL,";
-
-			foreach( FLang::getLangs() as $lc ){
-				$query .= "`handle-{$lc}` varchar(255) default NULL,
-					`value-{$lc}` varchar(255) default NULL,";
-			}
-
-			$query .= "PRIMARY KEY (`id`),
-				 KEY `entry_id` (`entry_id`)";
-
-			foreach(  FLang::getLangs() as $lc ){
-				$query .= ",KEY `handle-{$lc}` (`handle-{$lc}`)";
-				$query .= ",KEY `value-{$lc}` (`value-{$lc}`)";
-			}
-
-			$query .= ") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;";
-
-			return Symphony::Database()->query($query);
+			return Symphony::Database()
+				->create('tbl_entries_data_' . $this->get('id'))
+				->ifNotExists()
+				->fields(array_merge([
+					'id' => [
+						'type' => 'int(11)',
+						'auto' => true,
+					],
+					'entry_id' => 'int(11)',
+					'handle' => [
+						'type' => 'varchar(255)',
+						'null' => auto,
+					],
+					'value' => [
+						'type' => 'varchar(255)',
+						'null' => true,
+					],
+				], self::generateTableColumns()))
+				->keys(array_merge([
+					'id' => 'primary',
+					'entry_id' => 'key',
+				], self::generateTableKeys()))
+				->execute()
+				->success();
 		}
 
 
@@ -77,15 +107,14 @@
 		public function commit(){
 			if( !parent::commit() ) return false;
 
-			return Symphony::Database()->query(sprintf("
-				UPDATE
-					`tbl_fields_%s`
-				SET
-					`def_ref_lang` = '%s'
-				WHERE
-					`field_id` = '%s';",
-				$this->handle(), $this->get('def_ref_lang'), $this->get('id')
-			));
+			return Symphony::Database()
+				->update('tbl_fields_' . $this->handle())
+				->set([
+					'def_ref_lang' => $this->get('def_ref_lang'),
+				])
+				->where(['field_id' => $this->get('id')])
+				->execute()
+				->success();
 		}
 
 
@@ -94,7 +123,7 @@
 		/*  Publish  */
 		/*------------------------------------------------------------------------------------------------*/
 
-		public function displayPublishPanel(XMLElement &$wrapper, $data = NULL, $flagWithError = NULL, $fieldnamePrefix = NULL, $fieldnamePostfix = NULL, $entry_id = NULL){
+		public function displayPublishPanel(XMLElement &$wrapper, $data = null, $flagWithError = null, $fieldnamePrefix = null, $fieldnamePostfix = null, $entry_id = null){
 
 			// We've been called out of context: Pulblish Filter
 			$callback = Administration::instance()->getPageCallback();
@@ -128,7 +157,7 @@
 
 			$ul = new XMLElement('ul', null, array('class' => 'tabs'));
 			foreach( $langs as $lc ){
-				$li = new XMLElement('li', $all_langs[$lc], array('class' => $lc));
+				$li = new XMLElement('li', $lc, array('class' => $lc));
 				$lc === $main_lang ? $ul->prependChild($li) : $ul->appendChild($li);
 			}
 
@@ -140,7 +169,7 @@
 			/*------------------------------------------------------------------------------------------------*/
 
 			foreach( $langs as $lc ){
-				$div = new XMLElement('div', NULL, array('class' => 'tab-panel tab-'.$lc));
+				$div = new XMLElement('div', null, array('class' => 'tab-panel tab-'.$lc));
 
 				$label = Widget::Label();
 
@@ -154,13 +183,13 @@
 				$label->appendChild(
 					Widget::Input(
 						"fields{$fieldnamePrefix}[{$this->get('element_name')}][{$lc}]{$fieldnamePostfix}",
-						(strlen($value) != 0 ? General::sanitize($value) : NULL)
+						(strlen($value) != 0 ? General::sanitize($value) : null)
 					)
 				);
 
 				$div->appendChild($label);
 
-				if( $this->get('pre_populate_source') != NULL ){
+				if( $this->get('pre_populate_source') != null ){
 
 					$existing_tags = $this->findAllTags($lc);
 
@@ -187,7 +216,7 @@
 			/*  Errors  */
 			/*------------------------------------------------------------------------------------------------*/
 
-			if( $flagWithError != NULL )
+			if( $flagWithError != null )
 				$wrapper->appendChild(Widget::Error($container, $flagWithError));
 			else
 				$wrapper->appendChild($container);
@@ -199,7 +228,7 @@
 		/*  Input  */
 		/*------------------------------------------------------------------------------------------------*/
 
-		public function checkPostFieldData($data, &$message, $entry_id = NULL){
+		public function checkPostFieldData($data, &$message, $entry_id = null){
 			$error = self::__OK__;
 			$field_data = $data;
 
@@ -220,7 +249,7 @@
 			return $error;
 		}
 
-		public function processRawFieldData($data, &$status, &$message = NULL, $simulate = false, $entry_id = NULL){
+		public function processRawFieldData($data, &$status, &$message = null, $simulate = false, $entry_id = null){
 			if( !is_array($data) || empty($data) ) return parent::processRawFieldData($data, $status, $simulate, $entry_id);
 
 			$result = array();
@@ -239,7 +268,7 @@
 				// $this->_fakeDefaultFile($language_code, $entry_id);
 				$field_result = parent::processRawFieldData($data, $status, $simulate, $entry_id, $lc);
 
-				// complete array values with empty values to insert same number of fields 
+				// complete array values with empty values to insert same number of fields
 				// for all languages to avoid SQL malfunction avoid in multiple insert generation
 				$count = count($field_result['value']);
 				for( $i = $max_lang_tags; $i > $count; $i-- ){
@@ -262,7 +291,7 @@
 		/*  Output  */
 		/*------------------------------------------------------------------------------------------------*/
 
-		public function appendFormattedElement(XMLElement &$wrapper, $data, $encode = false, $mode = NULL, $entry_id = NULL){
+		public function appendFormattedElement(XMLElement &$wrapper, $data, $encode = false, $mode = null, $entry_id = null){
 			$lang_code = FLang::getLangCode();
 
 			// If called without language_code (search_index) return values of all languages
@@ -285,7 +314,7 @@
 			parent::appendFormattedElement($wrapper, $data);
 		}
 
-		public function prepareTableValue($data, XMLElement $link = NULL, $entry_id = null){
+		public function prepareTableValue($data, XMLElement $link = null, $entry_id = null){
 			$lang_code = FLang::getMainLang();
 
 			$data['value'] = $this->__clearEmtpyTags($data['value-'.$lang_code]);
@@ -294,7 +323,7 @@
 			return parent::prepareTableValue($data, $link, $entry_id);
 		}
 
-		public function getParameterPoolValue(array $data, $entry_id = NULL){
+		public function getParameterPoolValue(array $data, $entry_id = null){
 			return $this->__clearEmtpyTags($data['value-'.FLang::getMainLang()]);
 		}
 
@@ -403,17 +432,23 @@
 			if( $lang_code !== null ){
 				foreach( $this->get('pre_populate_source') as $item ){
 					try {
-						$result = Symphony::Database()->fetchCol('value-'.$lang_code, sprintf(
-							"SELECT DISTINCT `value-$lang_code` FROM tbl_entries_data_%d ORDER BY `value-$lang_code` ASC",
-							($item == 'existing' ? $this->get('id') : $item)
-						));
+						$result = Symphony::Database()
+							->select(['value-' . $lang_code])
+							->distinct()
+							->from('tbl_entries_data_' . ($item == 'existing' ? $this->get('id') : $item))
+							->orderBy('value-' . $lang_code)
+							->execute()
+							->column('value-' . $lang_code);
 					}
 					catch (Exception $ex) {
 						try {
-							$result = Symphony::Database()->fetchCol('value', sprintf(
-								"SELECT DISTINCT `value` FROM tbl_entries_data_%d ORDER BY `value` ASC",
-								($item == 'existing' ? $this->get('id') : $item)
-							));
+							$result = Symphony::Database()
+								->select(['value'])
+								->distinct()
+								->from('tbl_entries_data_' . ($item == 'existing' ? $this->get('id') : $item))
+								->orderBy('value')
+								->execute()
+								->column('value');
 						}
 						catch (Exception $ex) {
 							$result = null;

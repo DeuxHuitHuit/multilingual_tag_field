@@ -4,8 +4,8 @@
 
 
 
-	define_safe(MTF_NAME, 'Field: Multilingual Tag List');
-	define_safe(MTF_GROUP, 'multilingual_tag_field');
+	define_safe('MTF_NAME', 'Field: Multilingual Tag List');
+	define_safe('MTF_GROUP', 'multilingual_tag_field');
 
 
 
